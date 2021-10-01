@@ -1,15 +1,15 @@
 from datetime import datetime, timedelta
 from django_filters import rest_framework as rfilter
-from room.models import Room, Like, Image, Favorite, Rating, Reservation
+from room.models import Room, Like, Favorite, Rating, Reservation
 from rest_framework.decorators import action
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import filters, generics, viewsets, mixins
+from rest_framework import filters, generics, viewsets, mixins, status
 from rest_framework.viewsets import GenericViewSet
 from room.permissions import IsAuthorOrIsAdmin, IsAuthor
 from room.serializers import RoomListSerializer, RoomDetailSerializer, \
-    CreateRoomSerializer, RoomImagesSerializer, FavoriteRoomSerializer, RatingSerializer
+    CreateRoomSerializer, FavoriteRoomSerializer, RatingSerializer, ReservationSerializer
 
 
 class RoomFilter(rfilter.FilterSet):
@@ -26,7 +26,7 @@ class RoomViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthorOrIsAdmin,]
     filter_backends = [rfilter.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = RoomFilter
-    search_fields = ['name', 'user', 'price', 'status']
+    search_fields = ['name','price', 'status']
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -65,19 +65,20 @@ class RoomViewSet(viewsets.ModelViewSet):
                 favorite.delete()
             message = 'В избранном' if favorite.is_favorite else 'Не в избранном'
         except Favorite.DoesNotExist:
-            Favorite.objects.create(publication=post, user=user, is_favorite=True)
+            Favorite.objects.create(room=post, user=user, is_favorite=True)
             message = 'В избранном'
         return Response(message, status=200)
 
-    def confirm(request, pk=None):
+    @action(['POST', 'DELETE'], detail=True)
+    def confirm(self, request, pk=None):
         if request.method == 'POST':
             if pk:
                 room_id = Room.objects.get(pk=pk)
                 guest_id = request.user
-                check_in = request.session['check_in']
-                check_out = request.session['check_out']
+                check_in = request.data['check_in']
+                check_out = request.data['check_out']
                 reservation = Reservation(check_in=check_in, check_out=check_out, room_id=room_id.id,
-                                          guest_id=guest_id.id)
+                                          guest_id=guest_id.pk)
                 reservation.save()
                 book_in = datetime.strptime(check_in, '%Y-%m-%d').date()
                 book_out = datetime.strptime(check_out, '%Y-%m-%d').date()
@@ -88,24 +89,18 @@ class RoomViewSet(viewsets.ModelViewSet):
                     book_in += delta
                 else:
                     room_id.reserved = False
+        data = ReservationSerializer(reservation).data
+        return Response(data, status=status.HTTP_200_OK)
 
     def get_permissions(self):
         if self.action == 'create':
             return [IsAuthenticated()]
         elif self.action in ['update', 'partial_update', 'destroy']:
-            return [IsAuthor()]
-        elif self.action in ['like', 'favorite']:
+            return []
+        elif self.action in ['like', 'favorite', 'reservation']:
             return [IsAuthenticated()]
         else:
             return []
-
-
-class ImagesView(generics.ListCreateAPIView):
-    queryset = Image.objects.all()
-    serializer_class = RoomImagesSerializer
-
-    def get_serializer_context(self):
-        return {'request': self.request}
 
 
 class FavoriteView(ListAPIView):
@@ -113,6 +108,13 @@ class FavoriteView(ListAPIView):
     serializer_class = FavoriteRoomSerializer
     filter_backends = [rfilter.DjangoFilterBackend]
     filterset_fields = ['user']
+
+
+class ReservationView(ListAPIView):
+    queryset = Reservation.objects.all()
+    serializer_class = ReservationSerializer
+    filter_backends = [rfilter.DjangoFilterBackend]
+    filterset_fields = ['guest']
 
 
 class RatingViewSet(mixins.CreateModelMixin,

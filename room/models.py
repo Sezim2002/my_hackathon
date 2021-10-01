@@ -16,12 +16,14 @@ ROOM_STATUS = (
 
 class Room(models.Model):
     name = models.CharField('Название', max_length=200)
-    # img = models.ImageField('Картинка', upload_to='Pictures')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    img = models.ImageField('Картинка', upload_to='Pictures')
     desc = models.TextField()
     price = models.DecimalField('Цена', max_digits=100, decimal_places=2)
     is_reserved = models.BooleanField('Бронь', default=False)
     number_of_people = models.PositiveIntegerField('Количество людей')
     status = models.CharField('Статус комнаты', max_length=10, choices=ROOM_STATUS)
+    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
 
     class Meta:
         verbose_name = 'Комната'
@@ -66,9 +68,7 @@ class Rating(models.Model):
 
 
 class Like(models.Model):
-    publication = models.ForeignKey(Room,
-                                    on_delete=models.CASCADE,
-                                    related_name='likes')
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='likes')
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
                              related_name='likes')
@@ -79,13 +79,8 @@ class Like(models.Model):
         verbose_name_plural = 'Лайки'
 
 
-class Image(models.Model):
-    images = models.ImageField(upload_to='publications', blank=True, null=True)
-    pub = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='img')
-
-
 class Favorite(models.Model):
-    publication = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='favorite_pub')
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='favorite_pub')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     is_favorite = models.BooleanField(default=False)
 

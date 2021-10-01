@@ -10,6 +10,6 @@ router.register('rate', RatingViewSet, 'rating',)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('images/', ImagesView.as_view()),
     path('saved/', FavoriteView.as_view()),
+    path('confirm/', ReservationView.as_view()),
 ]

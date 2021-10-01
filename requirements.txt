@@ -8,4 +8,3 @@ django-filter
 django-rest-swagger
 drf-yasg
 celery
-redis

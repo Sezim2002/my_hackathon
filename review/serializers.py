@@ -6,12 +6,12 @@ from room.models import Room
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    publication = serializers.PrimaryKeyRelatedField(write_only=True, queryset=Room.objects.all())
+    room = serializers.PrimaryKeyRelatedField(write_only=True, queryset=Room.objects.all())
     user = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Comment
-        fields = ('id', 'publication', 'text', 'user',)
+        fields = ('id', 'room', 'text', 'user',)
 
     def create(self, validated_data):
         request = self.context.get('request')

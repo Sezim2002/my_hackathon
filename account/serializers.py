@@ -156,7 +156,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         return attrs
 
     def set_new_password(self):
-        user = self.validated_data.get('request').user
+        user = self.context.get('request').user
         password = self.validated_data.get('password')
         user.set_password(password)
         user.save()
